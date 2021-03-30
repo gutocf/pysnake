@@ -1,112 +1,109 @@
 import pyxel
-from random import randint
-
-WIDTH = 80
-HEIGHT = 80
-COLOR_BG = 0
-COLOR_BG_DEAD = 4
-UP = 1
-DOWN = 2
-LEFT = 3
-RIGHT = 4
-
+from snake import Snake
+from point import Point
+from apple import Apple
+from direction import Direction
 
 class Game:
 
+    width = 80
+    height = 80
+    title = "SNAKE GAME"
+
     def __init__(self):
-        pyxel.init(WIDTH, HEIGHT, caption="SNAKE GAME", fps=20)
+        pyxel.init(self.width, self.height, caption=self.title, fps=18)
         pyxel.load("my_resource.pyxres", True, False, False, False)
-        self.reset()
+        self.snake = Snake(self.width / 2, self.height / 2)
+        self.apple = Apple(Point(0, 20), Point(self.width, self.height))
+        self.direction = Direction()
+        self._reset()
         pyxel.run(self.update, self.draw)
 
-    def reset(self):
-        self.snake_x = WIDTH / 2
-        self.snake_y = HEIGHT / 2
-        self.dir = randint(1,4)
-        self.dead = False
-        self.hasApple = False
-        self.apple_x = 0
-        self.apple_y = 0
+    def _reset(self):
+        self.direction.up()
         self.points = 0
+        self.snake.reset()
+        self.apple.reset()
 
     def update(self):
         if pyxel.btnp(pyxel.KEY_Q):
             pyxel.quit()
 
-        if self.dead and pyxel.btnp(pyxel.KEY_R):
-            self.reset()
+        if not self.snake.alive and pyxel.btnp(pyxel.KEY_R):
+            self._reset()
 
-        self.checkAppleEaten()
-        self.changeDir()
-        self.move()
-
-    def checkAppleEaten(self):
-        if self.snake_x == self.apple_x and self.snake_y == self.apple_y:
-            self.hasApple = False
-            self.points += 1
-
-    def changeDir(self):
-        if pyxel.btnp(pyxel.KEY_UP):
-            self.dir = UP
-
-        if pyxel.btnp(pyxel.KEY_DOWN):
-            self.dir = DOWN
-
-        if pyxel.btnp(pyxel.KEY_LEFT):
-            self.dir = LEFT
-
-        if pyxel.btnp(pyxel.KEY_RIGHT):
-            self.dir = RIGHT
-
-    def move(self):
-        if self.dir == UP:
-            self.snake_y -= 1
-
-        if self.dir == RIGHT:
-            self.snake_x += 1
-
-        if self.dir == DOWN:
-            self.snake_y += 1
-
-        if self.dir == LEFT:
-            self.snake_x -= 1
-
-        if self.snake_x == 80 or self.snake_x == 0 or self.snake_y == 80 or self.snake_y == 5:
-            self.dead = True
+        self._checkAppleEaten()
+        self._changeDirection()
+        self._moveSnake()
 
     def draw(self):
+        if self.snake.alive:
+            pyxel.cls(0)
 
-        if self.dead == False:
-            pyxel.cls(col=COLOR_BG)
-
-        if self.dead == True:
+        if not self.snake.alive:
             pyxel.cls(5)
 
-        self.drawHeader()
-        self.drawSnake()
+        self._drawHeader()
+        self._drawSnake()
+        self._drawGameOver()
 
-    def drawSnake(self):
-        if self.dead == False:
-            pyxel.pset(self.snake_x, self.snake_y, 3)
-            self.drawApple()
+    def _drawSnake(self):
+        if self.snake.alive:
+            snake_colors = [6, 12, 5, 1]
+            idx_color = 1
+            for part in self.snake.body:
+                pyxel.pset(part.x, part.y, snake_colors[idx_color-1])
+                idx_color = min((idx_color+1), len(snake_colors))
+            self._drawApple()
 
-        if self.dead == True:
-            pyxel.text(22, 40, "GAME OVER", 1)
+    def _drawGameOver(self):
+        if not self.snake.alive:
+            for part in self.snake.body:
+                pyxel.pset(part.x, part.y, 8)
+            text = "PRESS R TO RESTART"
+            pyxel.text(5, 40, text, 1)
 
-    def drawApple(self):
-        if self.hasApple == False:
-            self.apple_x = randint(0, WIDTH - 1)
-            self.apple_y = randint(20, HEIGHT)
-            self.hasApple = True
+    def _drawApple(self):
+        if self.apple.eaten:
+            self.apple.reset()
 
-        pyxel.pset(self.apple_x, self.apple_y, 8)
+        pyxel.pset(self.apple.x, self.apple.y, 8)
 
-    def drawHeader(self):
-        pyxel.text(12, 2, "SNAKE GAME", 8)
+    def _drawHeader(self):
+        pyxel.text(12, 2, self.title, 8)
         points = str(self.points)
         x = 79 - (len(points) * 5) + len(points)
         pyxel.text(x, 2, points, 10)
         pyxel.blt(2, 0, 0, 0, 0, 8, 8, 0)
+
+    def _checkAppleEaten(self):
+        if self.snake.head == self.apple.position:
+            self.apple.eaten = True
+            self.points += 1
+            self.snake.grow()
+
+    def _changeDirection(self):
+        if pyxel.btnp(pyxel.KEY_UP):
+            self.direction.up()
+
+        if pyxel.btnp(pyxel.KEY_RIGHT):
+            self.direction.right()
+
+        if pyxel.btnp(pyxel.KEY_DOWN):
+            self.direction.down()
+
+        if pyxel.btnp(pyxel.KEY_LEFT):
+            self.direction.left()
+
+    def _moveSnake(self):
+        if(self.snake.alive):
+            self.snake.move(self.direction)
+            self._checkSnakeHitWalls()
+
+    def _checkSnakeHitWalls(self):
+        head = self.snake.head
+        if head.x >= self.width or head.x <= 0 or head.y >= self.height or head.y <= 5:
+            self.snake.alive = False
 
 
 Game()
