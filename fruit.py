@@ -2,16 +2,14 @@ from random import randint
 from point import Point
 
 
-class Apple:
+class Fruit:
 
-    position = Point(0, 0)
-    min = Point(0, 0)
-    max = Point(0, 0)
-    eaten = False
-
-    def __init__(self, min, max):
+    def __init__(self, min, max, color):
+        self.position = Point(0, 0)
+        self.eaten = False
         self.min = min
         self.max = max
+        self.color = color
         self.reset()
 
     def reset(self):

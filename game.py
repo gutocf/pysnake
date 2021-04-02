@@ -1,8 +1,9 @@
 import pyxel
 from snake import Snake
 from point import Point
-from apple import Apple
+from fruit import Fruit
 from direction import Direction
+
 
 class Game:
 
@@ -11,10 +12,16 @@ class Game:
     title = "SNAKE GAME"
 
     def __init__(self):
+        min = Point(0, 10)
+        max = Point(self.width-1, self.height-1)
         pyxel.init(self.width, self.height, caption=self.title, fps=18)
-        pyxel.load("my_resource.pyxres", True, False, False, False)
+        pyxel.load("my_resource.pyxres")
         self.snake = Snake(self.width / 2, self.height / 2)
-        self.apple = Apple(Point(0, 20), Point(self.width, self.height))
+        self.fruits = [
+            Fruit(min, max, 8),
+            Fruit(min, max, 9),
+            Fruit(min, max, 10)
+        ]
         self.direction = Direction()
         self._reset()
         pyxel.run(self.update, self.draw)
@@ -23,7 +30,8 @@ class Game:
         self.direction.up()
         self.points = 0
         self.snake.reset()
-        self.apple.reset()
+        for fruit in self.fruits:
+            fruit.reset()
 
     def update(self):
         if pyxel.btnp(pyxel.KEY_Q):
@@ -32,7 +40,9 @@ class Game:
         if not self.snake.alive and pyxel.btnp(pyxel.KEY_R):
             self._reset()
 
-        self._checkAppleEaten()
+        for fruit in self.fruits:
+            self._checkFruitEaten(fruit)
+
         self._changeDirection()
         self._moveSnake()
 
@@ -46,6 +56,9 @@ class Game:
         self._drawHeader()
         self._drawSnake()
         self._drawGameOver()
+        if self.snake.alive:
+            for fruit in self.fruits:
+                self._drawFruit(fruit)
 
     def _drawSnake(self):
         if self.snake.alive:
@@ -54,7 +67,6 @@ class Game:
             for part in self.snake.body:
                 pyxel.pset(part.x, part.y, snake_colors[idx_color-1])
                 idx_color = min((idx_color+1), len(snake_colors))
-            self._drawApple()
 
     def _drawGameOver(self):
         if not self.snake.alive:
@@ -63,24 +75,25 @@ class Game:
             text = "PRESS R TO RESTART"
             pyxel.text(5, 40, text, 1)
 
-    def _drawApple(self):
-        if self.apple.eaten:
-            self.apple.reset()
-
-        pyxel.pset(self.apple.x, self.apple.y, 8)
+    def _drawFruit(self, fruit):
+        if fruit.eaten:
+            fruit.reset()
+        pyxel.pset(fruit.x, fruit.y, fruit.color)
 
     def _drawHeader(self):
+        pyxel.rect(0, 0, 80, 9, 2)
         pyxel.text(12, 2, self.title, 8)
         points = str(self.points)
         x = 79 - (len(points) * 5) + len(points)
         pyxel.text(x, 2, points, 10)
         pyxel.blt(2, 0, 0, 0, 0, 8, 8, 0)
 
-    def _checkAppleEaten(self):
-        if self.snake.head == self.apple.position:
-            self.apple.eaten = True
+    def _checkFruitEaten(self, fruit):
+        if self.snake.head == fruit.position:
+            fruit.eaten = True
             self.points += 1
             self.snake.grow()
+            pyxel.playm(0, loop=False)
 
     def _changeDirection(self):
         if pyxel.btnp(pyxel.KEY_UP):
@@ -102,7 +115,7 @@ class Game:
 
     def _checkSnakeHitWalls(self):
         head = self.snake.head
-        if head.x >= self.width or head.x <= 0 or head.y >= self.height or head.y <= 5:
+        if head.x >= self.width or head.x < 0 or head.y >= self.height or head.y < 9:
             self.snake.alive = False
 
 
